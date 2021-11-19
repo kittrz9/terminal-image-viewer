@@ -1,6 +1,6 @@
 CC = gcc
 SHELL = /bin/bash
-CFLAGS = $(shell pkg-config --cflags glfw3) -Wall -Wpedantic 
+CFLAGS = -Wall -Wpedantic 
 LIBS = -lm
 NAME = imgview
 
