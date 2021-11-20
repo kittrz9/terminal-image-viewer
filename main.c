@@ -15,14 +15,12 @@ bool loadPNGtoBuffer(const char* filePath, terminalColor* buffer, unsigned int w
 	
 	unsigned char* data = stbi_load(filePath, &imgWidth, &imgHeight, &channels, 3);
 	
-	//printf("%i, %i, %i\n", imgHeight, imgWidth, channels);
 	for(unsigned int y = 0; y < h; ++y) {
 		for(unsigned int x = 0; x < w; ++x) {
 			// has to be float for some reason
 			unsigned int imgX = x * (imgWidth/(float)w);
 			unsigned int imgY = y * (imgHeight/(float)h);
 			unsigned int i = (imgY*imgWidth)+imgX;
-			//printf("%i, %i - %i %i\n", x, y, imgX, imgY);
 			terminalColor color = {
 				.r=data[i*3],
 				.g=data[i*3 + 1],
@@ -65,6 +63,7 @@ int main(int argc, char** argv) {
 			printColorAtLocation(x, y, terminalImage[(y*termWidth)+x]);
 		}
 	}
+	printf("\n");
 	
 	free(terminalImage);
 	
