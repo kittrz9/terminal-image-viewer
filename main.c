@@ -15,6 +15,11 @@ bool loadPNGtoBuffer(const char* filePath, terminalColor* buffer, unsigned int w
 	
 	unsigned char* data = stbi_load(filePath, &imgWidth, &imgHeight, &channels, 3);
 	
+	if(!data) {
+		printf("Couldn't load image at location \"%s\"\n", filePath);
+		return false;
+	}
+	
 	for(unsigned int y = 0; y < h; ++y) {
 		for(unsigned int x = 0; x < w; ++x) {
 			// has to be float for some reason
