@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <sys/ioctl.h>
+#include <ctype.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
@@ -44,22 +45,59 @@ void printColorAtLocation(unsigned int x, unsigned int y, terminalColor c) {
 }
 
 int main(int argc, char** argv) {
-	if(argc != 2) {
-		printf("Usage:\n\t%s [path to image]\n", argv[0]);
+	unsigned int termWidth = 0;
+	unsigned int termHeight = 0;
+	
+	if(argc < 2) {
+		printf("Usage:\n\t%s [path to image] [parameters]\n\n\t-w\tSet the width of the displayed image\n\t-h\tSet the height of the displayed image\n", argv[0]);
+		exit(1);
+	}
+	
+	char* filePath = NULL;
+	for(unsigned int i = 1; i < argc; ++i){
+		if(argv[i][0] == '-') {
+			// check second character in the parameter
+			switch(argv[i][1]){
+				case 'w':
+					if(isdigit(argv[++i][0])){
+						termWidth = atoi(argv[i]);
+					}
+					break;
+				
+				case 'h':
+					if(isdigit(argv[++i][0])){
+						termHeight = atoi(argv[i]);
+					}
+					break;
+				
+				default:
+					printf("Unrecognized parameter \"%s\"\n", argv[i]);
+					exit(1);
+					break;
+			}
+		} else {
+			filePath = argv[i];
+		}
+	}
+	if(filePath == NULL) {
+		printf("You need to provide an image\n");
 		exit(1);
 	}
 	
 	// https://iqcode.com/code/c/terminal-size-in-c
-	unsigned int termWidth, termHeight;
 	struct winsize w;
 	ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
 	
-	termWidth = w.ws_col;
-	termHeight = w.ws_row;
+	if(termWidth < 1) {
+		termWidth = w.ws_col;
+	}
+	if(termHeight < 1) {
+		termHeight = w.ws_row;
+	}
 	
 	terminalColor* terminalImage = malloc(sizeof(terminalColor) * termWidth * termHeight);
 	
-	if(!loadPNGtoBuffer(argv[1], terminalImage, termWidth, termHeight)){
+	if(!loadPNGtoBuffer(filePath, terminalImage, termWidth, termHeight)){
 		exit(1);
 	}
 	
@@ -68,7 +106,7 @@ int main(int argc, char** argv) {
 			printColorAtLocation(x, y, terminalImage[(y*termWidth)+x]);
 		}
 	}
-	printf("\n");
+	printf("\033[38;2;255;255;255m\033[48;2;0;0;0m\n");
 	
 	free(terminalImage);
 	
