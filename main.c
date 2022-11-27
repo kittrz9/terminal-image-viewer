@@ -41,7 +41,7 @@ bool loadPNGtoBuffer(const char* filePath, terminalColor* buffer, unsigned int w
 
 void printColorAtLocation(unsigned int x, unsigned int y, terminalColor c) {
 	// ansi escape codes are a mess lmao
-	printf("\033[%i;%iH\033[38;2;%i;%i;%im\033[48;2;%i;%i;%im ", y, x, c.r, c.g, c.b, c.r, c.g, c.b);
+	printf("\033[%i;%iH\033[48;2;%i;%i;%im ", y, x, c.r, c.g, c.b);
 }
 
 int main(int argc, char** argv) {
