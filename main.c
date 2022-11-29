@@ -55,25 +55,13 @@ terminalColor eightColorLUT[] = {
 	{255,255,255}, // white
 };
 
-typedef enum {
-	COLOR_BLACK,
-	COLOR_RED,
-	COLOR_GREEN,
-	COLOR_YELLOW,
-	COLOR_BLUE,
-	COLOR_MAGENTA,
-	COLOR_CYAN,
-	COLOR_WHITE,
-	COLOR_LIST_LENGTH,
-} limitedColor;
-
 void printColorAtLocation8Col(unsigned int x, unsigned int y, terminalColor c) {
-	limitedColor newColor;
+	uint8_t newColor;
 	uint8_t newColorInt = 40;
 	uint32_t newColorDistance = -1;
 	uint8_t i;
 
-	for(i = 0; i < COLOR_LIST_LENGTH; ++i) {
+	for(i = 0; i < sizeof(eightColorLUT)/sizeof(terminalColor); ++i) {
 		uint32_t currentColorDistance = 
 		   (c.r - eightColorLUT[i].r) * (c.r - eightColorLUT[i].r) +
 		   (c.g - eightColorLUT[i].g) * (c.g - eightColorLUT[i].g) +
