@@ -8,13 +8,13 @@
 #include "stb_image.h"
 
 typedef struct {
-	unsigned int r, g, b;
+	unsigned int r, g, b, a;
 } terminalColor;
 
 bool loadPNGtoBuffer(const char* filePath, terminalColor* buffer, unsigned int w, unsigned int h) {
 	int imgWidth, imgHeight, channels;
 	
-	unsigned char* data = stbi_load(filePath, &imgWidth, &imgHeight, &channels, 3);
+	unsigned char* data = stbi_load(filePath, &imgWidth, &imgHeight, &channels, 4);
 	
 	if(!data) {
 		printf("Couldn't load image at location \"%s\"\n", filePath);
@@ -28,9 +28,10 @@ bool loadPNGtoBuffer(const char* filePath, terminalColor* buffer, unsigned int w
 			unsigned int imgY = y * (imgHeight/(float)h);
 			unsigned int i = (imgY*imgWidth)+imgX;
 			terminalColor color = {
-				.r=data[i*3],
-				.g=data[i*3 + 1],
-				.b=data[i*3 + 2],
+				.r=data[i*4],
+				.g=data[i*4 + 1],
+				.b=data[i*4 + 2],
+				.a=data[i*4 + 3],
 			};
 			buffer[(y*w)+x] = color;
 		}
@@ -40,8 +41,14 @@ bool loadPNGtoBuffer(const char* filePath, terminalColor* buffer, unsigned int w
 }
 
 void printColorAtLocation(unsigned int x, unsigned int y, terminalColor c) {
-	// ansi escape codes are a mess lmao
-	printf("\033[%i;%iH\033[48;2;%i;%i;%im ", y, x, c.r, c.g, c.b);
+	printf("\033[%i;%iH", y, x);
+	// arbitrary cutoff point
+	if(c.a < 250) {
+		// to make it show the actual terminal background
+		printf("\033[0m ");
+	} else {
+		printf("\033[48;2;%i;%i;%im ", c.r, c.g, c.b);
+	}
 }
 
 terminalColor eightColorLUT[] = {
@@ -56,6 +63,12 @@ terminalColor eightColorLUT[] = {
 };
 
 void printColorAtLocation8Col(unsigned int x, unsigned int y, terminalColor c) {
+	printf("\033[%i;%iH", y, x);
+	if(c.a < 250) {
+		printf("\033[0m ");
+		return;
+	}
+
 	uint8_t newColor;
 	uint8_t newColorInt = 40;
 	uint32_t newColorDistance = -1;
@@ -67,7 +80,6 @@ void printColorAtLocation8Col(unsigned int x, unsigned int y, terminalColor c) {
 		   (c.g - eightColorLUT[i].g) * (c.g - eightColorLUT[i].g) +
 		   (c.b - eightColorLUT[i].b) * (c.b - eightColorLUT[i].b);
 		if(currentColorDistance < newColorDistance) {
-			//printf("%i %i\n", i, currentColorDistance);
 			newColor = i;
 			newColorDistance = currentColorDistance;
 		}
@@ -75,8 +87,7 @@ void printColorAtLocation8Col(unsigned int x, unsigned int y, terminalColor c) {
 
 	newColorInt += newColor;
 
-	printf("\033[%i,%iH\033[%im ", y, x, newColorInt);
-	//printf("\033[%i,%iH%i", x,y,newColorInt-30);
+	printf("\033[%im ", newColorInt);
 }
 
 typedef enum {
@@ -163,7 +174,8 @@ int main(int argc, char** argv) {
 			}
 		}
 	}
-	printf("\033[38;2;255;255;255m\033[48;2;0;0;0m\n");
+	// moves to the bottom since it messes up when displaying transparent images for some reason
+	printf("\033[H\033[%iB\033[38;2;255;255;255m\033[48;2;0;0;0m\n", termHeight);
 	
 	free(terminalImage);
 	
