@@ -8,7 +8,7 @@ ${NAME}: build-dir main.c
 	${CC} ${CFLAGS} ${LIBS} main.c -o build/${NAME}
 
 build-dir:
-	-mkdir build
+	-mkdir -p build
 
 clean:
 	-rm ./build/${NAME}*

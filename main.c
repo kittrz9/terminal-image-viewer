@@ -44,9 +44,64 @@ void printColorAtLocation(unsigned int x, unsigned int y, terminalColor c) {
 	printf("\033[%i;%iH\033[48;2;%i;%i;%im ", y, x, c.r, c.g, c.b);
 }
 
+terminalColor eightColorLUT[] = {
+	{0,0,0}, // black
+	{255,0,0}, // red
+	{0,255,0}, // green
+	{255,255,0}, // yellow
+	{0,0,255}, // blue
+	{255,0,255}, // magenta
+	{0,255,255}, // cyan
+	{255,255,255}, // white
+};
+
+typedef enum {
+	COLOR_BLACK,
+	COLOR_RED,
+	COLOR_GREEN,
+	COLOR_YELLOW,
+	COLOR_BLUE,
+	COLOR_MAGENTA,
+	COLOR_CYAN,
+	COLOR_WHITE,
+	COLOR_LIST_LENGTH,
+} limitedColor;
+
+void printColorAtLocation8Col(unsigned int x, unsigned int y, terminalColor c) {
+	limitedColor newColor;
+	uint8_t newColorInt = 40;
+	uint32_t newColorDistance = -1;
+	uint8_t i;
+
+	for(i = 0; i < COLOR_LIST_LENGTH; ++i) {
+		uint32_t currentColorDistance = 
+		   (c.r - eightColorLUT[i].r) * (c.r - eightColorLUT[i].r) +
+		   (c.g - eightColorLUT[i].g) * (c.g - eightColorLUT[i].g) +
+		   (c.b - eightColorLUT[i].b) * (c.b - eightColorLUT[i].b);
+		if(currentColorDistance < newColorDistance) {
+			//printf("%i %i\n", i, currentColorDistance);
+			newColor = i;
+			newColorDistance = currentColorDistance;
+		}
+	}
+
+	newColorInt += newColor;
+
+	printf("\033[%i,%iH\033[%im ", y, x, newColorInt);
+	//printf("\033[%i,%iH%i", x,y,newColorInt-30);
+}
+
+typedef enum {
+	COLOR_MODE_RGB,
+	COLOR_MODE_8,
+	COLOR_MODE_16,
+	COLOR_MODE_256,
+} colorModeEnum;
+
 int main(int argc, char** argv) {
 	unsigned int termWidth = 0;
 	unsigned int termHeight = 0;
+	colorModeEnum colorMode = COLOR_MODE_RGB;
 	
 	if(argc < 2) {
 		printf("Usage:\n\t%s [path to image] [parameters]\n\n\t-w\tSet the width of the displayed image\n\t-h\tSet the height of the displayed image\n", argv[0]);
@@ -68,6 +123,9 @@ int main(int argc, char** argv) {
 					if(isdigit(argv[++i][0])){
 						termHeight = atoi(argv[i]);
 					}
+					break;
+				case '8':
+					colorMode = COLOR_MODE_8;
 					break;
 				
 				default:
@@ -103,7 +161,18 @@ int main(int argc, char** argv) {
 	
 	for(unsigned int x = 0; x < termWidth; ++x){
 		for(unsigned int y = 0; y < termHeight; ++y){
-			printColorAtLocation(x, y, terminalImage[(y*termWidth)+x]);
+			switch(colorMode) {
+				case COLOR_MODE_RGB:
+					printColorAtLocation(x, y, terminalImage[(y*termWidth)+x]);
+					break;
+				case COLOR_MODE_8:
+					printColorAtLocation8Col(x, y, terminalImage[(y*termWidth)+x]);
+					break;
+				default:
+					printf("Color mode %i is not implemented\n", colorMode);
+					return 1;
+					break;
+			}
 		}
 	}
 	printf("\033[38;2;255;255;255m\033[48;2;0;0;0m\n");
