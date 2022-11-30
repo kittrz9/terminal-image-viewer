@@ -54,22 +54,22 @@ void printColorAtLocation(unsigned int x, unsigned int y, terminalColor c) {
 // colors are based on the color scheme of my terminal (the default one that comes with kitty)
 // if you want it to have your color scheme you'd need to edit these yourself
 terminalColor colorLUT[] = {
-	{0x00,0x00,0x00}, // black
-	{0xcc,0x04,0x03}, // red
-	{0x19,0xcb,0x00}, // green
-	{0x19,0xcb,0x00}, // yellow
-	{0x0d,0x73,0xcc}, // blue
-	{0xcb,0x1e,0xd1}, // magenta
-	{0x0d,0xcd,0xcd}, // cyan
-	{0xdd,0xdd,0xdd}, // white
-	{0x76,0x76,0x76}, // bright black
-	{0xf2,0x20,0x1f}, // bright red
-	{0x23,0xfd,0x00}, // bright green
-	{0xff,0xfd,0x00}, // bright yellow
-	{0x1a,0x8f,0xff}, // bright blue
-	{0xfd,0x28,0xff}, // bright magenta
-	{0x14,0xff,0xff}, // bright cyan
-	{0xff,0xff,0xff}, // bright white
+	{0x00,0x00,0x00},  // black
+	{0xcd,0x00,0x00},  // red
+	{0x00,0xcd,0x00},  // green
+	{0xcd,0xcd,0x00},  // yellow
+	{0x00,0x00,0xee},  // blue
+	{0xcd,0x00,0xcd},  // magenta
+	{0x00,0xcd,0xcd},  // cyan
+	{0xe5,0xe5,0xe5},  // white
+	{0x7f,0x7f,0x7f},  // bright black
+	{0xff,0x00,0x00},  // bright red
+	{0x00,0xff,0x00},  // bright green
+	{0xff,0xff,0x00},  // bright yellow
+	{0x5c,0x5c,0xff},  // bright blue
+	{0xff,0x00,0xff},  // bright magenta
+	{0x00,0xff,0xff},  // bright cyan
+	{0xff,0xff,0xff},  // bright white
 };
 
 void printColorAtLocationAtLUT(unsigned int x, unsigned int y, terminalColor c, terminalColor* lut, size_t lutSize) {
@@ -84,10 +84,16 @@ void printColorAtLocationAtLUT(unsigned int x, unsigned int y, terminalColor c, 
 	uint8_t i;
 
 	for(i = 0; i < lutSize; ++i) {
+// signed int so it doesn't underflow if lut[i] is greater, will always be positive when squared
+		int16_t deltaR = c.r - lut[i].r;
+		int16_t deltaG = c.g - lut[i].g;
+		int16_t deltaB = c.b - lut[i].b;
+// https://stackoverflow.com/questions/4485229/rgb-to-closest-predefined-color
+// still doesn't work perfectly but seems to not be going to gray as much
 		uint32_t currentColorDistance = 
-		   (c.r - lut[i].r) * (c.r - lut[i].r) +
-		   (c.g - lut[i].g) * (c.g - lut[i].g) +
-		   (c.b - lut[i].b) * (c.b - lut[i].b);
+			deltaR*deltaR*0.299 +
+			deltaG*deltaG*0.587 +
+			deltaB*deltaB*0.114;
 		if(currentColorDistance < newColorDistance) {
 			newColor = i;
 			newColorDistance = currentColorDistance;
