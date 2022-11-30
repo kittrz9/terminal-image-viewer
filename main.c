@@ -51,18 +51,28 @@ void printColorAtLocation(unsigned int x, unsigned int y, terminalColor c) {
 	}
 }
 
-terminalColor eightColorLUT[] = {
-	{0,0,0}, // black
-	{255,0,0}, // red
-	{0,255,0}, // green
-	{255,255,0}, // yellow
-	{0,0,255}, // blue
-	{255,0,255}, // magenta
-	{0,255,255}, // cyan
-	{255,255,255}, // white
+// colors are based on the color scheme of my terminal (the default one that comes with kitty)
+// if you want it to have your color scheme you'd need to edit these yourself
+terminalColor colorLUT[] = {
+	{0x00,0x00,0x00}, // black
+	{0xcc,0x04,0x03}, // red
+	{0x19,0xcb,0x00}, // green
+	{0x19,0xcb,0x00}, // yellow
+	{0x0d,0x73,0xcc}, // blue
+	{0xcb,0x1e,0xd1}, // magenta
+	{0x0d,0xcd,0xcd}, // cyan
+	{0xdd,0xdd,0xdd}, // white
+	{0x76,0x76,0x76}, // bright black
+	{0xf2,0x20,0x1f}, // bright red
+	{0x23,0xfd,0x00}, // bright green
+	{0xff,0xfd,0x00}, // bright yellow
+	{0x1a,0x8f,0xff}, // bright blue
+	{0xfd,0x28,0xff}, // bright magenta
+	{0x14,0xff,0xff}, // bright cyan
+	{0xff,0xff,0xff}, // bright white
 };
 
-void printColorAtLocation8Col(unsigned int x, unsigned int y, terminalColor c) {
+void printColorAtLocationAtLUT(unsigned int x, unsigned int y, terminalColor c, terminalColor* lut, size_t lutSize) {
 	printf("\033[%i;%iH", y, x);
 	if(c.a < 250) {
 		printf("\033[0m ");
@@ -70,24 +80,21 @@ void printColorAtLocation8Col(unsigned int x, unsigned int y, terminalColor c) {
 	}
 
 	uint8_t newColor;
-	uint8_t newColorInt = 40;
-	uint32_t newColorDistance = -1;
+	uint32_t newColorDistance = UINT32_MAX;
 	uint8_t i;
 
-	for(i = 0; i < sizeof(eightColorLUT)/sizeof(terminalColor); ++i) {
+	for(i = 0; i < lutSize; ++i) {
 		uint32_t currentColorDistance = 
-		   (c.r - eightColorLUT[i].r) * (c.r - eightColorLUT[i].r) +
-		   (c.g - eightColorLUT[i].g) * (c.g - eightColorLUT[i].g) +
-		   (c.b - eightColorLUT[i].b) * (c.b - eightColorLUT[i].b);
+		   (c.r - lut[i].r) * (c.r - lut[i].r) +
+		   (c.g - lut[i].g) * (c.g - lut[i].g) +
+		   (c.b - lut[i].b) * (c.b - lut[i].b);
 		if(currentColorDistance < newColorDistance) {
 			newColor = i;
 			newColorDistance = currentColorDistance;
 		}
 	}
 
-	newColorInt += newColor;
-
-	printf("\033[%im ", newColorInt);
+	printf("\033[48;5;%im ", newColor);
 }
 
 typedef enum {
@@ -103,7 +110,13 @@ int main(int argc, char** argv) {
 	colorModeEnum colorMode = COLOR_MODE_RGB;
 	
 	if(argc < 2) {
-		printf("Usage:\n\t%s [path to image] [parameters]\n\n\t-w\tSet the width of the displayed image\n\t-h\tSet the height of the displayed image\n", argv[0]);
+		printf(\
+"Usage:\n\
+\t%s [path to image] [parameters]\n\n\
+\t-w\tSet the width of the displayed image\n\
+\t-h\tSet the height of the displayed image\n\
+\t-8\tRender the image in 8 color mode\n\
+\t-x\tRender the image in 16 color mode\n", argv[0]);
 		exit(1);
 	}
 	
@@ -125,6 +138,9 @@ int main(int argc, char** argv) {
 					break;
 				case '8':
 					colorMode = COLOR_MODE_8;
+					break;
+				case 'x':
+					colorMode = COLOR_MODE_16;
 					break;
 				
 				default:
@@ -165,7 +181,10 @@ int main(int argc, char** argv) {
 					printColorAtLocation(x, y, terminalImage[(y*termWidth)+x]);
 					break;
 				case COLOR_MODE_8:
-					printColorAtLocation8Col(x, y, terminalImage[(y*termWidth)+x]);
+					printColorAtLocationAtLUT(x, y, terminalImage[(y*termWidth)+x], colorLUT, 8);
+					break;
+				case COLOR_MODE_16:
+					printColorAtLocationAtLUT(x, y, terminalImage[(y*termWidth)+x], colorLUT, 16);
 					break;
 				default:
 					printf("Color mode %i is not implemented\n", colorMode);
