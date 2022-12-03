@@ -53,7 +53,7 @@ void printColorAtLocation(unsigned int x, unsigned int y, terminalColor c) {
 
 // colors are based on the color scheme of my terminal (the default one that comes with kitty)
 // if you want it to have your color scheme you'd need to edit these yourself
-terminalColor colorLUT[] = {
+terminalColor colorLUT[256] = {
 	{0x00,0x00,0x00},  // black
 	{0xcd,0x00,0x00},  // red
 	{0x00,0xcd,0x00},  // green
@@ -72,6 +72,34 @@ terminalColor colorLUT[] = {
 	{0xff,0xff,0xff},  // bright white
 };
 
+
+// basically copied from https://github.com/kovidgoyal/kitty/blob/master/kitty/colors.c
+void initLUT() {
+	uint8_t offset = 16;
+	// 6x6x6 color cube
+	uint8_t valueRange[6] = {0x00, 0x5f, 0x87, 0xaf, 0xd7, 0xff};
+	for(uint8_t i = 0; i < 216; ++i) {
+		terminalColor c = {
+			valueRange[(i / 36) % 6],
+			valueRange[(i /  6) % 6],
+			valueRange[ i       % 6],
+		};
+		colorLUT[i+offset] = c;
+	}
+
+	// grayscale
+	offset = 232;
+	for(uint8_t i = 0; i < 24; ++i) {
+		uint8_t v = 8 + i * 10;
+		terminalColor c = {
+			v,
+			v,
+			v,
+		};
+		colorLUT[i+offset] = c;
+	}
+}
+
 void printColorAtLocationAtLUT(unsigned int x, unsigned int y, terminalColor c, terminalColor* lut, size_t lutSize) {
 	printf("\033[%i;%iH", y, x);
 	if(c.a < 250) {
@@ -81,7 +109,7 @@ void printColorAtLocationAtLUT(unsigned int x, unsigned int y, terminalColor c, 
 
 	uint8_t newColor;
 	uint32_t newColorDistance = UINT32_MAX;
-	uint8_t i;
+	uint16_t i;
 
 	for(i = 0; i < lutSize; ++i) {
 // signed int so it doesn't underflow if lut[i] is greater, will always be positive when squared
@@ -122,7 +150,8 @@ int main(int argc, char** argv) {
 \t-w\tSet the width of the displayed image\n\
 \t-h\tSet the height of the displayed image\n\
 \t-8\tRender the image in 8 color mode\n\
-\t-x\tRender the image in 16 color mode\n", argv[0]);
+\t-x\tRender the image in 16 color mode\n\
+\t-f\tRender the image in 256 color mode\n", argv[0]);
 		exit(1);
 	}
 	
@@ -147,6 +176,10 @@ int main(int argc, char** argv) {
 					break;
 				case 'x':
 					colorMode = COLOR_MODE_16;
+					break;
+				case 'f':
+					initLUT();
+					colorMode = COLOR_MODE_256;
 					break;
 				
 				default:
@@ -191,6 +224,9 @@ int main(int argc, char** argv) {
 					break;
 				case COLOR_MODE_16:
 					printColorAtLocationAtLUT(x, y, terminalImage[(y*termWidth)+x], colorLUT, 16);
+					break;
+				case COLOR_MODE_256:
+					printColorAtLocationAtLUT(x, y, terminalImage[(y*termWidth)+x], colorLUT, 256);
 					break;
 				default:
 					printf("Color mode %i is not implemented\n", colorMode);
