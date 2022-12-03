@@ -200,7 +200,7 @@ int main(int argc, char** argv) {
 		}
 	}
 	// moves to the bottom since it messes up when displaying transparent images for some reason
-	printf("\033[H\033[%iB\033[38;2;255;255;255m\033[48;2;0;0;0m\n", termHeight);
+	printf("\033[H\033[%iB\033[0m\n", termHeight);
 	
 	free(terminalImage);
 	
