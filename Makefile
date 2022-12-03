@@ -1,6 +1,6 @@
 CC = gcc
 SHELL = /bin/bash
-CFLAGS = -Wall -Wpedantic 
+CFLAGS = -Wall -Wpedantic -Wextra -O3
 LIBS = -lm
 NAME = imgview
 

@@ -7,6 +7,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+#define UNUSED __attribute((unused))
+
 typedef struct {
 	unsigned int r, g, b, a;
 } terminalColor;
@@ -40,7 +42,9 @@ bool loadPNGtoBuffer(const char* filePath, terminalColor* buffer, unsigned int w
 	return true;
 }
 
-void printColorAtLocation(unsigned int x, unsigned int y, terminalColor c) {
+// kinda dumb to have these unused parameters at the end but it's so that I don't get warnings when I assign the function pointer later
+// since I'm assigning the function pointer with either this or the LUT function to avoid having to check the color mode every time in the loop
+void printColorAtLocation(unsigned int x, unsigned int y, terminalColor c, UNUSED terminalColor* lut, UNUSED size_t lutSize) {
 	printf("\033[%i;%iH", y, x);
 	// arbitrary cutoff point
 	if(c.a < 250) {
@@ -54,22 +58,22 @@ void printColorAtLocation(unsigned int x, unsigned int y, terminalColor c) {
 // colors are based on the color scheme of my terminal (the default one that comes with kitty)
 // if you want it to have your color scheme you'd need to edit these yourself
 terminalColor colorLUT[256] = {
-	{0x00,0x00,0x00},  // black
-	{0xcd,0x00,0x00},  // red
-	{0x00,0xcd,0x00},  // green
-	{0xcd,0xcd,0x00},  // yellow
-	{0x00,0x00,0xee},  // blue
-	{0xcd,0x00,0xcd},  // magenta
-	{0x00,0xcd,0xcd},  // cyan
-	{0xe5,0xe5,0xe5},  // white
-	{0x7f,0x7f,0x7f},  // bright black
-	{0xff,0x00,0x00},  // bright red
-	{0x00,0xff,0x00},  // bright green
-	{0xff,0xff,0x00},  // bright yellow
-	{0x5c,0x5c,0xff},  // bright blue
-	{0xff,0x00,0xff},  // bright magenta
-	{0x00,0xff,0xff},  // bright cyan
-	{0xff,0xff,0xff},  // bright white
+	{0x00,0x00,0x00,0xff},  // black
+	{0xcd,0x00,0x00,0xff},  // red
+	{0x00,0xcd,0x00,0xff},  // green
+	{0xcd,0xcd,0x00,0xff},  // yellow
+	{0x00,0x00,0xee,0xff},  // blue
+	{0xcd,0x00,0xcd,0xff},  // magenta
+	{0x00,0xcd,0xcd,0xff},  // cyan
+	{0xe5,0xe5,0xe5,0xff},  // white
+	{0x7f,0x7f,0x7f,0xff},  // bright black
+	{0xff,0x00,0x00,0xff},  // bright red
+	{0x00,0xff,0x00,0xff},  // bright green
+	{0xff,0xff,0x00,0xff},  // bright yellow
+	{0x5c,0x5c,0xff,0xff},  // bright blue
+	{0xff,0x00,0xff,0xff},  // bright magenta
+	{0x00,0xff,0xff,0xff},  // bright cyan
+	{0xff,0xff,0xff,0xff},  // bright white
 };
 
 
@@ -83,6 +87,7 @@ void initLUT() {
 			valueRange[(i / 36) % 6],
 			valueRange[(i /  6) % 6],
 			valueRange[ i       % 6],
+			0xff,
 		};
 		colorLUT[i+offset] = c;
 	}
@@ -95,19 +100,20 @@ void initLUT() {
 			v,
 			v,
 			v,
+			0xff,
 		};
 		colorLUT[i+offset] = c;
 	}
 }
 
-void printColorAtLocationAtLUT(unsigned int x, unsigned int y, terminalColor c, terminalColor* lut, size_t lutSize) {
+void printColorAtLocationWithLUT(unsigned int x, unsigned int y, terminalColor c, terminalColor* lut, size_t lutSize) {
 	printf("\033[%i;%iH", y, x);
 	if(c.a < 250) {
 		printf("\033[0m ");
 		return;
 	}
 
-	uint8_t newColor;
+	uint8_t newColor = 0;
 	uint32_t newColorDistance = UINT32_MAX;
 	uint16_t i;
 
@@ -156,7 +162,7 @@ int main(int argc, char** argv) {
 	}
 	
 	char* filePath = NULL;
-	for(unsigned int i = 1; i < argc; ++i){
+	for(int i = 1; i < argc; ++i){
 		if(argv[i][0] == '-') {
 			// check second character in the parameter
 			switch(argv[i][1]){
@@ -212,27 +218,23 @@ int main(int argc, char** argv) {
 	if(!loadPNGtoBuffer(filePath, terminalImage, termWidth, termHeight)){
 		exit(1);
 	}
+
+	size_t lutSize;
+	if(colorMode == COLOR_MODE_8)   { lutSize = 8;   }
+	if(colorMode == COLOR_MODE_16)  { lutSize = 16;  }
+	if(colorMode == COLOR_MODE_256) { lutSize = 256; }
+
+	// probably really dumb but I'm doing this to get the color mode checks out of the loop
+	void (*functionPointer)(unsigned int x, unsigned int y, terminalColor c, terminalColor* lut, size_t lutSize);
+	if(colorMode == COLOR_MODE_RGB) {
+		functionPointer = printColorAtLocation;
+	} else {
+		functionPointer = printColorAtLocationWithLUT;
+	}
 	
 	for(unsigned int x = 0; x < termWidth; ++x){
 		for(unsigned int y = 0; y < termHeight; ++y){
-			switch(colorMode) {
-				case COLOR_MODE_RGB:
-					printColorAtLocation(x, y, terminalImage[(y*termWidth)+x]);
-					break;
-				case COLOR_MODE_8:
-					printColorAtLocationAtLUT(x, y, terminalImage[(y*termWidth)+x], colorLUT, 8);
-					break;
-				case COLOR_MODE_16:
-					printColorAtLocationAtLUT(x, y, terminalImage[(y*termWidth)+x], colorLUT, 16);
-					break;
-				case COLOR_MODE_256:
-					printColorAtLocationAtLUT(x, y, terminalImage[(y*termWidth)+x], colorLUT, 256);
-					break;
-				default:
-					printf("Color mode %i is not implemented\n", colorMode);
-					return 1;
-					break;
-			}
+			(*functionPointer)(x, y, terminalImage[(y*termWidth)+x], colorLUT, lutSize);
 		}
 	}
 	// moves to the bottom since it messes up when displaying transparent images for some reason
